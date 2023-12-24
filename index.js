@@ -3,7 +3,7 @@ const connectToDatabase = require('./database');
 connectToDatabase();
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 app.get("/", (req, res) => {
     res.status(200).send('Hello World');
 });
