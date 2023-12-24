@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
-const uri = "mongodb://localhost:27017/todoUser?readPreference=primary&appname=MongoDB%20Compass&directConnection=true&ssl=false";
+require('dotenv').config();
+const url = process.env.DATABASE_URL;
 
 const connectToDatabase = () => {
-    mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+    console.log(url);
+    mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true });
 
     const db = mongoose.connection;
 
