@@ -10,7 +10,7 @@ app.get("/", (req, res) => {
 });
 
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: 'https://todo-list-by-yashwant.netlify.app/',
     credentials: true, 
 }));
 
