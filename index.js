@@ -10,7 +10,7 @@ app.get("/", (req, res) => {
 });
 
 app.use(cors({
-    origin: 'https://todo-list-by-yashwant.netlify.app',
+    origin: 'https://todo-list-by-yashwant.netlify.app/',
     credentials: true, 
 }));
 
