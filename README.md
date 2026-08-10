@@ -1,84 +1,211 @@
 # To-Do List Backend API
 
-A robust Node.js REST API backend for task management featuring user authentication with JWT, MongoDB persistence, and complete CRUD operations for notes. Designed to seamlessly integrate with modern frontend applications.
+A production-ready REST API backend for a to-do list application, built with **Node.js**, **Express 5**, and **TypeScript**. It provides secure user authentication (JWT + bcrypt) and full CRUD operations for user-specific notes, backed by a **PostgreSQL** database.
 
-## Overview
+---
 
-This is a production-grade Express.js API server that provides secure authentication and task management endpoints. Users can register, authenticate, and manage their personal notes/tasks with full permission-based access control. The API implements industry-standard security practices including password hashing, JWT token validation, and input validation.
+## Features
 
-## Stack
+- 🔐 **JWT-based Authentication** — Stateless authentication using `Authorization: Bearer <token>` headers.
+- 🔑 **Password Hashing** — Passwords encrypted with `bcrypt` (10 salt rounds) before storage.
+- 📝 **Notes CRUD** — Create, read, update, and delete notes, scoped to the authenticated user.
+- 🛡️ **Input Validation** — Request body and route parameters validated with **Zod** schemas.
+- 🗄️ **PostgreSQL Persistence** — Database access via `pg` connection pooling.
+- 🌐 **CORS Enabled** — Allows cross-origin requests from frontend applications.
+- 🏗️ **TypeScript** — Strict type checking, compiled to `dist/` for production.
+- ✅ **Health Check** — Simple `/status` endpoint for uptime/liveness monitoring.
 
-- **Language:** JavaScript (Node.js)
-- **Framework / Runtime:** Express.js 4.18.2
-- **Database:** MongoDB with Mongoose 8.0.1 ORM
-- **Authentication:** JWT (jsonwebtoken 9.0.2), bcryptjs 2.4.3
-- **Validation:** express-validator 7.0.1
-- **Middleware:** CORS 2.8.5, express.json()
-- **Development:** Nodemon 3.0.1 for auto-restart
-- **Environment**: dotenv 16.3.1 for config management
+---
 
-## Architecture
+## Tech Stack
+
+| Layer           | Technology                            |
+| --------------- | ------------------------------------- |
+| **Language**    | TypeScript (strict mode)              |
+| **Runtime**     | Node.js (ESM, `"type": "module"`)     |
+| **Framework**   | Express 5.2                           |
+| **Database**    | PostgreSQL                            |
+| **DB Driver**   | `pg` (node-postgres, connection pool) |
+| **Validation**  | Zod 4                                 |
+| **Auth**        | `jsonwebtoken` (JWT), `bcrypt`        |
+| **Config**      | `dotenv`                              |
+| **CORS**        | `cors`                                |
+| **Build**       | `tsc` → `dist/`                       |
+| **Dev Tooling** | `tsx watch` (hot-reload development)  |
+
+---
+
+## Project Structure
 
 ```
-controller/              Business logic and request handlers
-  user.js               User registration, login, profile endpoints
-  notes.js              Note CRUD operations and business logic
-middleware/             Express middleware for request processing
-  fetchuser.js          JWT authentication middleware
-models/                 MongoDB schema definitions
-  User.js               User schema (username, email, password, timestamps)
-  Note.js               Note schema (user ref, title, body, tag, timestamps)
-routes/                 API route definitions
-  auth.js               Auth routes: register, login, get user
-  notes.js              Note routes: list, create, update, delete
-database.js             MongoDB connection configuration
-index.js                Express app initialization and server setup
+src/
+├── index.ts                    # Express app bootstrap & server startup
+├── config/
+│   ├── env.ts                  # Environment variable parsing & defaults
+│   └── database.ts             # PostgreSQL connection pool (pg.Pool)
+├── controllers/
+│   ├── auth-controller.ts      # Request handlers: register, login, token login
+│   └── notes-controller.ts     # Request handlers: CRUD operations for notes
+├── errors/
+│   ├── DublicateEmailError.ts  # 409 — email already registered (PG unique violation 23505)
+│   ├── InternalServerError.ts  # 500 — unexpected server error
+│   ├── NoteNotFound.ts         # 404 — note doesn't exist / no notes found
+│   └── UserNotExistError.ts    # 404 — user doesn't exist
+├── middleware/
+│   ├── authUser.ts             # JWT verification → attaches payload to res.locals
+│   ├── validateBody.ts         # Zod schema validation for request bodies
+│   └── validateParms.ts        # Zod schema validation for route parameters
+├── routes/
+│   ├── auth-router.ts          # /api/auth routes
+│   └── note-router.ts          # /api/notes routes (all protected)
+├── schemas/
+│   ├── auth-schema.ts          # Register/Login Zod schemas, JWT payload type
+│   ├── base-schema.ts          # Base response / error interfaces
+│   ├── note-schema.ts          # Note entity interface
+│   ├── notes-schema.ts         # Note body/params Zod schemas, response types
+│   └── user-schema.ts          # User entity interface
+└── service/
+    ├── bcrypt-service.ts       # Hash generation & password comparison
+    ├── jwt-service.ts          # Token sign & verify helpers
+    ├── note-service.ts         # DB queries for note operations
+    └── user-service.ts         # DB queries for user operations
 ```
 
-**Request Flow:**
+### Request Flow
 
-1. **Incoming Request** → Express middleware (CORS, JSON parser) → Route router
-2. **Authentication** → Route checks `fetchuser` middleware → Validates JWT token from `auth-token` header
-3. **Validation** → express-validator checks request body (email format, password strength, field presence)
-4. **Business Logic** → Controller processes validated data → Interacts with MongoDB via Mongoose
-5. **Response** → Controller sends JSON response with status codes (201 created, 200 success, 400/401 auth errors, 500 server errors)
+1. **Incoming Request** → Global middleware (`express.json()`, `cors`) → route router.
+2. **Validation** → `validateBody` / `validateParms` middleware validates the request with Zod; a `400` response is returned on failure.
+3. **Authentication** → `authUser` middleware verifies the JWT from the `Authorization: Bearer <token>` header; attaches `{ id }` to `res.locals`; a `401` response is returned for missing/invalid tokens.
+4. **Business Logic** → Controller calls the service layer, which executes parameterized SQL queries against PostgreSQL.
+5. **Response** → JSON response with an appropriate HTTP status code (`200`, `201`, `400`, `401`, `404`, `409`, `500`).
 
-## Database Schema
+---
 
-### User Model
-```javascript
-{
-  _id: ObjectId (auto-generated),
-  username: String (required),
-  email: String (required, unique),
-  password: String (required, bcrypt hashed),
-  createdAt: Date (auto),
-  updatedAt: Date (auto)
-}
+## Getting Started
+
+### Prerequisites
+
+- **Node.js** (v18+ recommended, ESM support required)
+- **npm**
+- **PostgreSQL** (local instance or cloud-hosted)
+
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Yashwant937363/To-Do_List_Backend.git
+cd To-Do_List_Backend
+
+# 2. Install dependencies
+npm install
+
+# 3. Create your environment file
+cp .env.example .env
 ```
 
-### Note Model
-```javascript
-{
-  _id: ObjectId (auto-generated),
-  user: ObjectId (ref to User, required),
-  title: String (required),
-  body: String (required),
-  tag: String (default: "General"),
-  createdAt: Date (auto),
-  updatedAt: Date (auto),
-  // toJSON transformer: converts _id to id, removes __v
-}
+### Environment Variables
+
+Configure the following variables in your `.env` file:
+
+| Variable         | Default | Description                               |
+| ---------------- | ------- | ----------------------------------------- |
+| `PORT`           | `5000`  | Port the server listens on                |
+| `DB_HOST`        | —       | PostgreSQL host                           |
+| `DB_PORT`        | —       | PostgreSQL port (e.g., `5432`)            |
+| `DB_USER`        | —       | PostgreSQL username                       |
+| `DB_PASSWORD`    | —       | PostgreSQL password                       |
+| `DB_NAME`        | —       | PostgreSQL database name                  |
+| `JWT_SECRET_KEY` | —       | Secret key used to sign/verify JWT tokens |
+
+Example `.env`:
+
+```env
+PORT=5000
+DB_HOST=localhost
+DB_NAME=todo
+DB_PASSWORD=mysecretpassword
+DB_PORT=5432
+DB_USER=postgres
+JWT_SECRET_KEY=your-super-secret-key
 ```
+
+### Database Setup
+
+The application expects a PostgreSQL database with two tables:
+
+**`users`**
+
+| Column     | Type   | Constraints            |
+| ---------- | ------ | ---------------------- |
+| `id`       | serial | Primary Key            |
+| `username` | text   | NOT NULL               |
+| `email`    | text   | NOT NULL, UNIQUE       |
+| `password` | text   | NOT NULL (bcrypt hash) |
+
+**`notes`**
+
+| Column    | Type    | Constraints               |
+| --------- | ------- | ------------------------- |
+| `id`      | serial  | Primary Key               |
+| `title`   | text    | NOT NULL                  |
+| `body`    | text    | NOT NULL                  |
+| `tag`     | text    | NOT NULL                  |
+| `user_id` | integer | Foreign Key → `users(id)` |
+
+> The `users.email` unique constraint drives the `409 Conflict` response via the PostgreSQL error code `23505` (unique_violation).
+
+---
+
+## Running the Server
+
+```bash
+# Development mode (hot-reload with tsx watch)
+npm run dev
+
+# Production build (compiles TypeScript → dist/)
+npm run build
+
+# Production start (runs compiled output)
+npm start
+```
+
+The server starts at `http://localhost:5000`.
+
+**Quick health check:**
+
+```bash
+curl http://localhost:5000/status
+# → live
+```
+
+---
 
 ## API Endpoints
 
-### Authentication Routes (`/api/auth`)
+All endpoints accept and return **JSON**.
 
-#### POST `/api/auth` - Register New User
-Create a new user account.
+### Health Check
+
+#### `GET /status`
+
+Returns a plain-text liveness response.
+
+**Response `200 OK`:**
+
+```
+live
+```
+
+---
+
+### Authentication (`/api/auth`)
+
+#### `POST /api/auth/register` — Register a new user
+
+Creates a user account and returns a JWT token.
 
 **Request Body:**
+
 ```json
 {
   "username": "john_doe",
@@ -87,116 +214,150 @@ Create a new user account.
 }
 ```
 
-**Validation Rules:**
-- `username`: Required, minimum 3 characters
-- `email`: Required, valid email format
-- `password`: Required, minimum 8 characters
+**Validation Rules (Zod):**
 
-**Response (201 Created):**
+| Field      | Rule                         |
+| ---------- | ---------------------------- |
+| `username` | Required, min length 1       |
+| `email`    | Required, valid email format |
+| `password` | Required, min length 8       |
+
+**Response `201 Created`:**
+
 ```json
 {
-  "authtoken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-**Error Responses:**
-- `400 Bad Request`: Validation errors or duplicate email
-- `500 Internal Server Error`: Database error
-
----
-
-#### POST `/api/auth/login` - User Login
-Authenticate user and receive JWT token.
-
-**Request Body:**
-```json
-{
-  "email": "john@example.com",
-  "password": "securePassword123"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "authtoken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "username": "john_doe",
-  "msg": "Login Successful"
-}
-```
-
-**Error Responses:**
-- `400 Bad Request`: Validation errors
-- `401 Unauthorized`: Invalid email or password
-- `500 Internal Server Error`: Server error
-
----
-
-#### GET `/api/auth/` - Get Logged-In User Details
-Fetch authenticated user profile information.
-
-**Headers Required:**
-```
-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**Response (200 OK):**
-```json
-{
-  "_id": "507f1f77bcf86cd799439011",
-  "username": "john_doe",
-  "email": "john@example.com",
-  "createdAt": "2024-06-21T10:30:00.000Z",
-  "updatedAt": "2024-06-21T10:30:00.000Z"
-}
-```
-
-**Error Responses:**
-- `401 Unauthorized`: Missing or invalid token
-- `500 Internal Server Error`: Database error
-
----
-
-### Notes Routes (`/api/notes`)
-
-#### GET `/api/notes/` - Fetch All Notes
-Retrieve all notes for the authenticated user.
-
-**Headers Required:**
-```
-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": "507f1f77bcf86cd799439012",
-    "user": "507f1f77bcf86cd799439011",
-    "title": "Buy groceries",
-    "body": "Milk, bread, eggs, butter",
-    "tag": "Shopping",
-    "createdAt": "2024-06-21T11:00:00.000Z",
-    "updatedAt": "2024-06-21T11:00:00.000Z"
+  "message": "user created",
+  "data": {
+    "authtoken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
-]
+}
 ```
 
 **Error Responses:**
-- `401 Unauthorized`: Missing or invalid token
-- `500 Internal Server Error`: Database error
+
+- `400` — Invalid request body
+- `409` — Email already exists (`"Email Already Exists"`)
 
 ---
 
-#### POST `/api/notes/` - Create New Note
-Add a new note/task for the authenticated user.
+#### `POST /api/auth/login` — Log in a user
 
-**Headers Required:**
+Authenticates the user and returns a JWT token.
+
+**Request Body:**
+
+```json
+{
+  "email": "john@example.com",
+  "password": "securePassword123"
+}
 ```
-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+**Validation Rules (Zod):**
+
+| Field      | Rule                         |
+| ---------- | ---------------------------- |
+| `email`    | Required, valid email format |
+| `password` | Required, min length 8       |
+
+**Response `200 OK`:**
+
+```json
+{
+  "message": "User logged in",
+  "data": {
+    "authtoken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "username": "john_doe"
+  }
+}
+```
+
+**Error Responses:**
+
+- `400` — Invalid request body
+- `401` — Invalid credentials (`"Unauthorized"`)
+
+---
+
+#### `GET /api/auth/` — Get logged-in user by token
+
+Verifies the provided JWT and returns user details along with a fresh token.
+
+**Headers:**
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Response `200 OK`:**
+
+```json
+{
+  "message": "User logged in",
+  "data": {
+    "email": "john@example.com",
+    "username": "john_doe",
+    "authtoken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+**Error Responses:**
+
+- `401` — Missing or invalid token (`"unauthorized"`)
+
+---
+
+### Notes (`/api/notes`)
+
+> **All note endpoints require authentication.** Include the `Authorization: Bearer <token>` header. Failure to provide a valid token returns `401`.
+
+#### `GET /api/notes/all` — Fetch all notes for the user
+
+Retrieves every note belonging to the authenticated user.
+
+**Headers:**
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Response `201 Created`:**
+
+```json
+{
+  "message": "fetched all notes",
+  "data": [
+    {
+      "id": 1,
+      "title": "Buy groceries",
+      "body": "Milk, bread, eggs, butter",
+      "tag": "Shopping",
+      "user_id": 1
+    }
+  ]
+}
+```
+
+**Error Responses:**
+
+- `401` — Missing or invalid token
+- `404` — No notes found (`"Note Not Found"`)
+
+---
+
+#### `POST /api/notes/` — Create a new note
+
+Creates a note owned by the authenticated user.
+
+**Headers:**
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Request Body:**
+
 ```json
 {
   "title": "Buy groceries",
@@ -205,244 +366,238 @@ auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-**Validation Rules:**
-- `title`: Required, cannot be null
-- `body`: Required, minimum 5 characters
-- `tag`: Optional, defaults to "General"
+**Validation Rules (Zod):**
 
-**Response (200 OK):**
+| Field   | Rule                            |
+| ------- | ------------------------------- |
+| `title` | Required, min 1 / max 256 chars |
+| `body`  | Required, min length 1          |
+| `tag`   | Required, min 1 / max 100 chars |
+
+**Response `201 Created`:**
+
 ```json
 {
-  "note": {
-    "id": "507f1f77bcf86cd799439012",
-    "user": "507f1f77bcf86cd799439011",
-    "title": "Buy groceries",
-    "body": "Milk, bread, eggs, butter",
-    "tag": "Shopping",
-    "createdAt": "2024-06-21T11:00:00.000Z",
-    "updatedAt": "2024-06-21T11:00:00.000Z"
-  },
-  "msg": "Note has been successfully created"
-}
-```
-
-**Error Responses:**
-- `400 Bad Request`: Validation errors
-- `401 Unauthorized`: Missing or invalid token
-- `500 Internal Server Error`: Server error
-
----
-
-#### PUT `/api/notes/:id` - Update Note
-Modify an existing note by ID (user-owned only).
-
-**Headers Required:**
-```
-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**Request Parameters:**
-- `id`: Note's MongoDB ObjectId
-
-**Request Body:**
-```json
-{
-  "title": "Updated title",
-  "body": "Updated description",
-  "tag": "NewTag"
-}
-```
-
-**Validation Rules:**
-- `title`: Required, cannot be null
-- `body`: Required, minimum 5 characters
-- `tag`: Optional
-
-**Response (200 OK):**
-```json
-{
-  "note": {
-    "id": "507f1f77bcf86cd799439012",
-    "user": "507f1f77bcf86cd799439011",
-    "title": "Updated title",
-    "body": "Updated description",
-    "tag": "NewTag",
-    "createdAt": "2024-06-21T11:00:00.000Z",
-    "updatedAt": "2024-06-21T12:30:00.000Z"
+  "message": "note created",
+  "data": {
+    "note": {
+      "id": 1,
+      "title": "Buy groceries",
+      "body": "Milk, bread, eggs, butter",
+      "tag": "Shopping",
+      "user_id": 1
+    }
   }
 }
 ```
 
 **Error Responses:**
-- `400 Bad Request`: Validation errors
-- `401 Unauthorized`: Invalid token or not note owner
-- `404 Not Found`: Note doesn't exist
-- `500 Internal Server Error`: Server error
+
+- `400` — Invalid request body
+- `401` — Missing or invalid token
 
 ---
 
-#### DELETE `/api/notes/:id` - Delete Note
-Remove a note by ID (user-owned only).
+#### `PATCH /api/notes/:id` — Update a note
 
-**Headers Required:**
+Updates an existing note. Only the owner of the note can update it.
+
+**Headers:**
+
 ```
-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-**Request Parameters:**
-- `id`: Note's MongoDB ObjectId
+**Path Parameters:**
 
-**Response (200 OK):**
+- `id` — numeric note ID (validated by Zod)
+
+**Request Body:**
+
 ```json
 {
-  "msg": "Note has been successfully deleted"
+  "title": "Updated title",
+  "body": "Updated description",
+  "tag": "Work"
+}
+```
+
+**Validation Rules (Zod):**
+
+| Field   | Rule                            |
+| ------- | ------------------------------- |
+| `title` | Required, min 1 / max 256 chars |
+| `body`  | Required, min length 1          |
+| `tag`   | Required, min 1 / max 100 chars |
+
+**Response `200 OK`:**
+
+```json
+{
+  "message": "note updated",
+  "data": {
+    "note": {
+      "id": 1,
+      "title": "Updated title",
+      "body": "Updated description",
+      "tag": "Work",
+      "user_id": 1
+    }
+  }
 }
 ```
 
 **Error Responses:**
-- `401 Unauthorized`: Invalid token or not note owner
-- `404 Not Found`: Note doesn't exist
-- `500 Internal Server Error`: Server error
+
+- `400` — Invalid request body or invalid `id` parameter
+- `401` — Missing or invalid token
+- `404` — Note not found / not owned by the user (`"Note Not Found"`)
 
 ---
 
-## Security Features
+#### `DELETE /api/notes/:id` — Delete a note
 
-### Authentication
-- **JWT Tokens**: Secure stateless authentication with configurable expiration
-- **Password Hashing**: bcryptjs with salt rounds for secure password storage
-- **Token Header**: Uses custom `auth-token` header for token transmission
+Deletes an existing note. Only the owner of the note can delete it.
 
-### Authorization
-- **User Isolation**: Users can only access their own notes and profile
-- **Ownership Validation**: Update/delete operations verify user ownership
+**Headers:**
 
-### Input Validation
-- **express-validator**: Server-side validation for all endpoints
-- **Email Format**: RFC compliance checking
-- **Password Requirements**: Minimum 8 characters enforced
-- **Field Presence**: Required fields validated before processing
-
-### CORS
-- CORS enabled for cross-origin requests from frontend applications
-
-## How to Run
-
-### Prerequisites
-- Node.js 14+ and npm
-- MongoDB instance (local or cloud - Atlas)
-- Environment variables configuration
-
-### Installation & Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/Yashwant937363/To-Do_List_Backend.git
-cd To-Do_List_Backend
-
-# Install dependencies
-npm install
-
-# Create .env file
-cat > .env << EOF
-DATABASE_URL=mongodb+srv://username:password@cluster.mongodb.net/todolist
-PORT=5000
-FRONTENDURL=http://localhost:3000
-EOF
-
-# Replace with your actual MongoDB connection string
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-### Running the Server
+**Path Parameters:**
 
-```bash
-# Production mode
-npm start
-# Server runs at http://localhost:5000
+- `id` — numeric note ID (validated by Zod)
 
-# Development mode with auto-restart
-npm run dev
-# Uses Nodemon to auto-restart on file changes
+**Response `200 OK`:**
+
+```json
+{
+  "message": "note deleted",
+  "data": {
+    "note": {
+      "id": 1,
+      "title": "Buy groceries",
+      "body": "Milk, bread, eggs, butter",
+      "tag": "Shopping",
+      "user_id": 1
+    }
+  }
+}
 ```
 
-### Verification
+**Error Responses:**
 
-```bash
-# Test the server
-curl http://localhost:5000
-# Expected response: "Hello World"
+- `400` — Invalid `id` parameter
+- `401` — Missing or invalid token
+- `404` — Note not found / not owned by the user (`"Note Not Found"`)
 
-# Test an API endpoint
-curl -X POST http://localhost:5000/api/auth \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "email": "test@example.com",
-    "password": "testpass123"
-  }'
-```
+---
 
-## Environment Variables
+## Authentication & Authorization
 
-```env
-DATABASE_URL=mongodb+srv://user:password@cluster.mongodb.net/databasename
-PORT=5000                                    # Server port (defaults to 5000)
-FRONTENDURL=http://localhost:3000          # Frontend URL for CORS (optional)
-```
+### How it works
 
-## Middleware
+1. On **register** or **login**, the server generates a JWT signed with `JWT_SECRET_KEY` containing the user's `id` as the payload.
+2. The client must send this token in every protected request:
 
-### fetchuser (Authentication Middleware)
-Located in `middleware/fetchuser.js`
+   ```
+   Authorization: Bearer <token>
+   ```
 
-- Validates JWT token from `auth-token` header
-- Extracts user ID and attaches to `req.user`
-- Returns 401 error if token invalid or missing
-- Used on all protected routes (notes CRUD, user details)
+3. The `authUser` middleware (`src/middleware/authUser.ts`) extracts the token from the `Authorization` header, verifies it with `jwt.verify`, and attaches the decoded payload (`{ id }`) to `res.locals`.
+4. Controllers use `res.locals.id` to scope all note queries to the authenticated user, ensuring **data isolation** — users can only read, update, or delete their own notes.
+
+### Security measures
+
+- **Password hashing:** `bcrypt` with 10 salt rounds (`src/service/bcrypt-service.ts`).
+- **JWT signing/verification:** `jsonwebtoken` using the configured `JWT_SECRET_KEY` (`src/service/jwt-service.ts`).
+- **SQL injection protection:** All database queries use parameterized statements (`$1, $2, ...`).
+- **Input validation:** Zod schemas reject malformed bodies and path parameters with `400` responses.
+- **User isolation:** Every note query includes `WHERE user_id = $n`, preventing cross-user access.
+
+---
 
 ## Error Handling
 
-The API uses standard HTTP status codes:
-- `200`: Successful GET/PUT request
-- `201`: Successful resource creation (POST)
-- `400`: Bad request (validation errors)
-- `401`: Unauthorized (invalid token or credentials)
-- `404`: Resource not found
-- `500`: Internal server error
+Custom error classes are used throughout the service layer and mapped to HTTP responses in the controllers:
 
-All error responses include descriptive error messages and validation details.
+| Error Class           | HTTP Status | Message                 | Trigger                                           |
+| --------------------- | ----------- | ----------------------- | ------------------------------------------------- |
+| `DublicateEmailError` | `409`       | `Email Already Exists`  | PostgreSQL unique violation (`23505`) on register |
+| `InternalServerError` | `500`       | `Internal Server Error` | Unexpected database/service failure               |
+| `NoteNotFound`        | `404`       | `Note Not Found`        | No notes found / note not owned by user           |
+| `UserNotExist`        | `404`       | `User Not Found`        | User lookup by email or id fails                  |
 
-## Development & Deployment
+### Standard HTTP Status Codes
 
-### Local Development
-```bash
-npm run dev
+| Status | Meaning                                     |
+| ------ | ------------------------------------------- |
+| `200`  | Successful GET/PATCH/DELETE requests        |
+| `201`  | Successful POST requests (resource created) |
+| `400`  | Validation failure (request body or params) |
+| `401`  | Missing/invalid JWT or invalid credentials  |
+| `404`  | Resource not found                          |
+| `409`  | Duplicate email on registration             |
+| `500`  | Internal server error                       |
+
+Validation errors from Zod follow this shape:
+
+```json
+{
+  "message": "Invalid Request body",
+  "errors": ["String must contain at least 8 character(s)"]
+}
 ```
 
-### Production Build
+---
+
+## Scripts
+
+| Command         | Description                                     |
+| --------------- | ----------------------------------------------- |
+| `npm run dev`   | Starts the server with `tsx watch` (hot reload) |
+| `npm run build` | Compiles TypeScript to `dist/` via `tsc`        |
+| `npm start`     | Runs the compiled server (`node dist/index.js`) |
+
+---
+
+## Deployment
+
+This repository contains no containerization or CI/CD configuration; deployment follows a standard Node.js build-and-run model.
+
+### Manual Deployment
+
 ```bash
+# 1. Install production dependencies
+npm install --omit=dev
+
+# 2. Compile TypeScript to JavaScript
+npm run build
+
+# 3. Set environment variables (must be configured on the host)
+export PORT=5000
+export DB_HOST=<postgres-host>
+export DB_PORT=5432
+export DB_USER=<db-user>
+export DB_PASSWORD=<db-password>
+export DB_NAME=<db-name>
+export JWT_SECRET_KEY=<strong-secret>
+
+# 4. Start the server
 npm start
-# Ensure .env is configured with production database and URLs
 ```
 
-### Cloud Deployment (Example: Heroku)
-```bash
-heroku create your-app-name
-heroku config:set DATABASE_URL=your_mongodb_uri
-git push heroku main
-```
+### Platform-Specific Notes
 
-## Try Asking
+- **Linux VM / VPS:** Use a process manager such as `pm2` (`pm2 start dist/index.js`) to keep the server running.
+- **Docker:** Provide a base image with Node.js, run `npm ci`, `npm run build`, set `.env` variables, and expose `PORT` (default `5000`).
+- **PaaS (Heroku, Render, Railway, etc.):** Set the environment variables in the platform dashboard, then use the build command `npm run build` and start command `npm start`.
 
-- How does the JWT token authentication flow work in the fetchuser middleware?
-- What validation rules are applied when creating or updating notes?
-- How are user notes isolated to ensure data privacy across users?
+> **Important:** Use a strong, unique `JWT_SECRET_KEY` in production. Never commit the real `.env` file — it is ignored via `.gitignore`.
+
+---
 
 ## License
 
 ISC
-
----
-
-**Repository**: [Yashwant937363/To-Do_List_Backend](https://github.com/Yashwant937363/To-Do_List_Backend)  
-**Default Branch**: `main`
