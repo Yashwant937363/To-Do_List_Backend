@@ -9,6 +9,7 @@ interface ENV {
   db_user: string;
   db_password: string;
   db_name: string;
+  log_level: string;
 }
 
 export const env: ENV = {
@@ -19,4 +20,5 @@ export const env: ENV = {
   db_user: process.env.DB_USER || "",
   db_password: process.env.DB_PASSWORD || "",
   db_name: process.env.DB_NAME || "",
+  log_level: process.env.LOG_LEVEL || "debug",
 };

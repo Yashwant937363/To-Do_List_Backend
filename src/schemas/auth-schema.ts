@@ -20,6 +20,7 @@ export interface LoginResponse extends BaseResponse {
   data: {
     authtoken: string;
   };
+  user_id: number;
 }
 
 export interface JWTPayload {

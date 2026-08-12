@@ -1,7 +1,5 @@
 import { pool } from "../config/database.js";
 import { DublicateEmailError } from "../errors/DublicateEmailError.js";
-
-import { InternalServerError } from "../errors/InternalServerError.js";
 import { UserNotExist } from "../errors/UserNotExistError.js";
 
 import type {
@@ -33,13 +31,13 @@ export const createUser = async ({
       data: {
         authtoken,
       },
+      user_id: result.rows[0].id,
     };
   } catch (e: any) {
-    console.log(e);
     if (e.code === "23505") {
       throw new DublicateEmailError();
     }
-    throw new InternalServerError();
+    throw e;
   }
 };
 
@@ -51,12 +49,11 @@ export const getUser = async ({ email }: { email: string }): Promise<User> => {
 
     const result = await pool.query(query, [email]);
     if (result.rows.length <= 0) {
-      throw new UserNotExist();
+      throw new UserNotExist({ email });
     }
     return result.rows[0] as User;
   } catch (e: any) {
-    console.log(e);
-    throw new InternalServerError();
+    throw e;
   }
 };
 export const getUserById = async ({ id }: { id: number }): Promise<User> => {
@@ -67,11 +64,10 @@ export const getUserById = async ({ id }: { id: number }): Promise<User> => {
 
     const result = await pool.query(query, [id]);
     if (result.rows.length <= 0) {
-      throw new UserNotExist();
+      throw new UserNotExist({ id });
     }
     return result.rows[0] as User;
   } catch (e: any) {
-    console.log(e);
-    throw new InternalServerError();
+    throw e;
   }
 };

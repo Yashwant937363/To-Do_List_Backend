@@ -1,4 +1,9 @@
-import { response, type Request, type Response } from "express";
+import {
+  response,
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import { NoteNotFound } from "../errors/NoteNotFound.js";
 import type {
   CreateNoteReq,
@@ -17,45 +22,55 @@ import {
 export const getNotes = async (
   req: Request,
   res: Response<any, JWTPayload>,
+  next: NextFunction,
 ) => {
   try {
     const response = await getAllNotes({
       user_id: res.locals.id,
     });
-    res.status(response.status).json({
+    req.log.info(
+      {
+        user_id: res.locals.id,
+      },
+      "Fetched all notes successfully",
+    );
+    return res.status(response.status).json({
       message: response.message,
       data: response.data,
     });
   } catch (e) {
-    if (e instanceof NoteNotFound) {
-      return res.status(e.statusCode).json({ message: e.message });
-    }
-    console.log("Something went wrong", e);
-    res.status(500).json({ message: "Something went wrong" });
+    next(e);
   }
 };
 export const createNote = async (
   req: Request<{}, {}, CreateNoteReq>,
   res: Response<any, JWTPayload>,
+  next: NextFunction,
 ) => {
-  console.log(`"Got Req"`);
   try {
     const response = await createNewNote({
       ...req.body,
       user_id: res.locals.id,
     });
-    res.status(response.status).json({
+    req.log.info(
+      {
+        user_id: res.locals.id,
+        note_id: response.data.note.id,
+      },
+      "Note created successfully",
+    );
+    return res.status(response.status).json({
       message: response.message,
       data: response.data,
     });
   } catch (e) {
-    console.log("Something went wrong", e);
-    res.status(500).json({ message: "Something went wrong" });
+    next(e);
   }
 };
 export const updateNote = async (
   req: Request<NoteParms, {}, UpdateNoteReq>,
   res: Response<any, JWTPayload>,
+  next: NextFunction,
 ) => {
   try {
     const id = Number(req.params.id);
@@ -64,21 +79,22 @@ export const updateNote = async (
       user_id: res.locals.id,
       id,
     });
+    req.log.info(
+      { user_id: res.locals.id, note_id: id },
+      "Note updated successfully",
+    );
     res.status(response.status).json({
       message: response.message,
       data: response.data,
     });
   } catch (e: any) {
-    if (e instanceof NoteNotFound) {
-      return res.status(e.statusCode).json({ message: e.message });
-    }
-    console.log("Something went wrong", e);
-    res.status(500).json({ message: "Something went wrong" });
+    next(e);
   }
 };
 export const deleteNote = async (
   req: Request<NoteParms, {}, {}>,
   res: Response<any, JWTPayload>,
+  next: NextFunction,
 ) => {
   try {
     const id = Number(req.params.id);
@@ -86,15 +102,15 @@ export const deleteNote = async (
       id,
       user_id: res.locals.id,
     });
-    res.status(response.status).json({
+    req.log.info(
+      { user_id: res.locals.id, note_id: id },
+      "Note deleted successfully",
+    );
+    return res.status(response.status).json({
       message: response.message,
       data: response.data,
     });
   } catch (e) {
-    if (e instanceof NoteNotFound) {
-      return res.status(e.statusCode).json({ message: e.message });
-    }
-    console.log("Something went wrong", e);
-    res.status(500).json({ message: "Something went wrong" });
+    next(e);
   }
 };

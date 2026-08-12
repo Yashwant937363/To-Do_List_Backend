@@ -1,12 +1,6 @@
-import jwt from "jsonwebtoken";
-
-import { configDotenv } from "dotenv";
 import type { NextFunction, Request, Response } from "express";
 import type { JWTPayload } from "../schemas/auth-schema.js";
 import { verifyToken } from "../service/jwt-service.js";
-configDotenv();
-
-const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
 
 export const authUser = async (
   req: Request,
@@ -17,6 +11,7 @@ export const authUser = async (
     const authHeader = req.headers["authorization"];
     const token = authHeader?.split(" ")[1];
     if (token === undefined) {
+      req.log.warn("Unauthorized access attempt: Missing token");
       return res.status(401).json({ message: "unauthorized" });
     }
 
@@ -24,6 +19,7 @@ export const authUser = async (
     res.locals = result;
     next();
   } catch (e) {
+    req.log.warn({ err: e }, "Unauthorized access attempt: Invalid token");
     return res.status(401).json({ message: "unauthorized" });
   }
 };

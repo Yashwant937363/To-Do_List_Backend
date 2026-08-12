@@ -1,7 +1,9 @@
 export class InternalServerError extends Error {
   statusCode: number;
-  constructor() {
-    super("Internal Server Error");
+  constructor(cause: unknown) {
+    super("Internal Server Error", {
+      cause,
+    });
     this.statusCode = 500;
   }
 }

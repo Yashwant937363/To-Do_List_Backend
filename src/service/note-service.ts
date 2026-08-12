@@ -1,5 +1,4 @@
 import { pool } from "../config/database.js";
-import { InternalServerError } from "../errors/InternalServerError.js";
 import { NoteNotFound } from "../errors/NoteNotFound.js";
 import type { Note } from "../schemas/note-schema.js";
 import type {
@@ -16,7 +15,9 @@ export const getAllNotes = async ({
     const query = "SELECT * FROM notes WHERE user_id=$1";
     const response = await pool.query(query, [user_id]);
     if (response.rows.length <= 0) {
-      throw new NoteNotFound();
+      throw new NoteNotFound({
+        user_id,
+      });
     }
     return {
       message: "fetched all notes",
@@ -24,11 +25,7 @@ export const getAllNotes = async ({
       data: response.rows,
     };
   } catch (e) {
-    console.log("Something went wrong", e);
-    if (e instanceof NoteNotFound) {
-      throw new NoteNotFound();
-    }
-    throw new InternalServerError();
+    throw e;
   }
 };
 
@@ -57,7 +54,7 @@ export const createNewNote = async ({
       },
     };
   } catch (e) {
-    throw new InternalServerError();
+    throw e;
   }
 };
 
@@ -81,7 +78,10 @@ export const updateNoteById = async ({
       "UPDATE notes SET title=$1,body=$2,tag=$3 WHERE user_id=$4 AND id=$5 RETURNING *";
     const response = await pool.query(query, [title, body, tag, user_id, id]);
     if (response.rows.length <= 0) {
-      throw new NoteNotFound();
+      throw new NoteNotFound({
+        user_id,
+        note_id: id,
+      });
     }
     return {
       message: "note updated",
@@ -91,11 +91,7 @@ export const updateNoteById = async ({
       },
     };
   } catch (e) {
-    console.log("Something went wrong", e);
-    if (e instanceof NoteNotFound) {
-      throw new NoteNotFound();
-    }
-    throw new InternalServerError();
+    throw e;
   }
 };
 
@@ -112,7 +108,10 @@ export const deleteNoteById = async ({
     const query = "DELETE FROM notes WHERE user_id=$1 AND id=$2 RETURNING *";
     const response = await pool.query(query, [user_id, id]);
     if (response.rows.length <= 0) {
-      throw new NoteNotFound();
+      throw new NoteNotFound({
+        user_id,
+        note_id: id,
+      });
     }
     return {
       message: "note deleted",
@@ -122,10 +121,6 @@ export const deleteNoteById = async ({
       },
     };
   } catch (e) {
-    console.log("Something went wrong", e);
-    if (e instanceof NoteNotFound) {
-      throw new NoteNotFound();
-    }
-    throw new InternalServerError();
+    throw e;
   }
 };
