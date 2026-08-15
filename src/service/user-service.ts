@@ -42,32 +42,24 @@ export const createUser = async ({
 };
 
 export const getUser = async ({ email }: { email: string }): Promise<User> => {
-  try {
-    const query = `
+  const query = `
             SELECT * FROM users WHERE email=$1
         `;
 
-    const result = await pool.query(query, [email]);
-    if (result.rows.length <= 0) {
-      throw new UserNotExist({ email });
-    }
-    return result.rows[0] as User;
-  } catch (e: any) {
-    throw e;
+  const result = await pool.query(query, [email]);
+  if (result.rows.length <= 0) {
+    throw new UserNotExist({ email });
   }
+  return result.rows[0] as User;
 };
 export const getUserById = async ({ id }: { id: number }): Promise<User> => {
-  try {
-    const query = `
+  const query = `
             SELECT * FROM users WHERE id=$1
         `;
 
-    const result = await pool.query(query, [id]);
-    if (result.rows.length <= 0) {
-      throw new UserNotExist({ id });
-    }
-    return result.rows[0] as User;
-  } catch (e: any) {
-    throw e;
+  const result = await pool.query(query, [id]);
+  if (result.rows.length <= 0) {
+    throw new UserNotExist({ id });
   }
+  return result.rows[0] as User;
 };
