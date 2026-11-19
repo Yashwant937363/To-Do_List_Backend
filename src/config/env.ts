@@ -11,6 +11,9 @@ interface ENV {
   db_password: string;
   db_name: string;
   log_level: string;
+  loki_host: string;
+  loki_user: string;
+  loki_token: string;
 }
 
 export const env: ENV = {
@@ -23,4 +26,7 @@ export const env: ENV = {
   db_password: process.env.DB_PASSWORD || "",
   db_name: process.env.DB_NAME || "",
   log_level: process.env.LOG_LEVEL || "debug",
+  loki_host: process.env.LOKI_HOST || "",
+  loki_user: process.env.LOKI_USER || "",
+  loki_token: process.env.LOKI_TOKEN || "",
 };
