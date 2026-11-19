@@ -209,6 +209,33 @@
           "legendFormat": "P95 Latency"
         }
       ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+      "id": 103,
+      "title": "Live Application Logs (Grafana Cloud Loki)",
+      "type": "row"
+    },
+    {
+      "datasource": "Loki (Grafana Cloud)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
+      "id": 9,
+      "title": "Live Server Logs",
+      "type": "logs",
+      "options": {
+        "showLabels": false,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "datasource": "Loki (Grafana Cloud)",
+          "expr": "{app=\"todo-backend\"}",
+          "queryType": "range"
+        }
+      ]
     }
   ],
   "refresh": "5s",

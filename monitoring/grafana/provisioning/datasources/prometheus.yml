@@ -7,3 +7,13 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: true
+
+  - name: "Loki (Grafana Cloud)"
+    type: loki
+    access: proxy
+    url: "https://logs-prod-028.grafana.net"
+    basicAuth: true
+    basicAuthUser: "1889299"
+    secureJsonData:
+      basicAuthPassword: "$__env{LOKI_TOKEN}"
+    editable: true
