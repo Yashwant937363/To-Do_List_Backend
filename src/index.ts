@@ -7,7 +7,6 @@ import noteRouter from "./routes/note-router.js";
 import { logger } from "./config/logger.js";
 import pinoHttp from "pino-http";
 import { checkDatabaseConnection, pool } from "./config/database.js";
-import { DublicateEmailError } from "./errors/DublicateEmailError.js";
 import { globalErrorHandler } from "./handlers/globalErrorHandler.js";
 import { register } from "./config/metrics.js";
 import { metricsMiddleware } from "./middleware/matricsMiddleware.js";

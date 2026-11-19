@@ -7,7 +7,6 @@ import type {
   LoginResponse,
   RegisterReq,
 } from "../schemas/auth-schema.js";
-import type { BaseError } from "../schemas/base-schema.js";
 import type User from "../schemas/user-schema.js";
 import { getHash } from "./bcrypt-service.js";
 import { generateToken } from "./jwt-service.js";
@@ -24,7 +23,7 @@ export const createUser = async ({
         `;
 
     const result = await pool.query(query, [username, email, passwordHash]);
-    const authtoken = generateToken<JWTPayload>(result.rows[0].id);
+    const authtoken = generateToken<JWTPayload>({ id: result.rows[0].id });
     return {
       status: 201,
       message: "user created",

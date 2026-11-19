@@ -1,7 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
 import { createUser, getUser, getUserById } from "../service/user-service.js";
-import { InternalServerError } from "../errors/InternalServerError.js";
-import { DublicateEmailError } from "../errors/DublicateEmailError.js";
 import type { JWTPayload, LoginReq } from "../schemas/auth-schema.js";
 import { compareHash, getHash } from "../service/bcrypt-service.js";
 import { generateToken } from "../service/jwt-service.js";

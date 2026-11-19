@@ -1,14 +1,23 @@
-import { Pool } from "pg";
+import { Pool, type PoolConfig } from "pg";
 import { env } from "./env.js";
 import { logger } from "./logger.js";
 
-export const pool = new Pool({
-  host: env.db_host,
-  port: env.db_port,
-  user: env.db_user,
-  password: env.db_password,
-  database: env.db_name,
-});
+const poolConfig: PoolConfig = env.database_url
+  ? {
+      connectionString: env.database_url,
+      ssl: env.database_url.includes("sslmode=require")
+        ? { rejectUnauthorized: false }
+        : undefined,
+    }
+  : {
+      host: env.db_host,
+      port: env.db_port,
+      user: env.db_user,
+      password: env.db_password,
+      database: env.db_name,
+    };
+
+export const pool = new Pool(poolConfig);
 
 export async function checkDatabaseConnection() {
   try {

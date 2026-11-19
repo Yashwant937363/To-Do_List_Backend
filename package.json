@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "seed:tier1": "tsx scripts/seed-tier1.ts",
     "test": "vitest",
     "test:run": "vitest run"
   },
