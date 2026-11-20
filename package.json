@@ -9,6 +9,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "seed:tier1": "tsx scripts/seed-tier1.ts",
+    "seed:tier2": "tsx scripts/seed-tier2.ts",
+    "metrics:summary": "python3 scripts/prometheus-summary.py",
     "test": "vitest",
     "test:run": "vitest run"
   },

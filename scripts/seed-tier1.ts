@@ -3,7 +3,7 @@ import path from "path";
 import bcrypt from "bcrypt";
 import { pool } from "../src/config/database.js";
 import { generateToken } from "../src/service/jwt-service.js";
-import type { JWTPayload } from "../schemas/auth-schema.js";
+import type { JWTPayload } from "../src/schemas/auth-schema.js";
 
 const TOTAL_USERS = 100;
 const MIN_NOTES_PER_USER = 10;
@@ -50,7 +50,9 @@ function getRandomInt(min: number, max: number): number {
 
 async function seedTier1() {
   console.log("🚀 Starting Tier 1 Seeding Process...");
-  console.log(`Target: ${TOTAL_USERS} users, ~${TOTAL_USERS * 15} notes total\n`);
+  console.log(
+    `Target: ${TOTAL_USERS} users, ~${TOTAL_USERS * 15} notes total\n`,
+  );
 
   const client = await pool.connect();
 
@@ -109,7 +111,7 @@ async function seedTier1() {
         const tag = getRandomItem(SAMPLE_TAGS);
 
         notePlaceholders.push(
-          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`
+          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`,
         );
         noteValues.push(title, body, tag, user.id);
         paramIndex += 4;
@@ -142,7 +144,9 @@ async function seedTier1() {
 
     const outputPath = path.join(outputDir, "users.json");
     fs.writeFileSync(outputPath, JSON.stringify(k6UserData, null, 2));
-    console.log(`✅ Saved ${k6UserData.length} authenticated user profiles to:`);
+    console.log(
+      `✅ Saved ${k6UserData.length} authenticated user profiles to:`,
+    );
     console.log(`   ${outputPath}\n`);
 
     console.log("🎉 Tier 1 Seeding Complete!");

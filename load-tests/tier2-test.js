@@ -2,33 +2,40 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { SharedArray } from 'k6/data';
 
-// Load pre-authenticated users
+// Load pre-authenticated users from 5,000 pool
 const users = new SharedArray('users', function () {
   return JSON.parse(open('./users.json'));
 });
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:5000';
+// Target server URL (defaults to Fly.io)
+const BASE_URL = __ENV.BASE_URL || 'https://to-do-list-backend-psvxmg.fly.dev';
+
+// Dynamic Virtual User (VU) Configuration
+// Pass via CLI: `k6 run -e VUS=400 load-tests/tier2-test.js`
+const PEAK_VUS = parseInt(__ENV.VUS || '400', 10);
+const WARMUP_VUS = Math.max(1, Math.round(PEAK_VUS * 0.4));
+const SURGE_VUS = Math.max(1, Math.round(PEAK_VUS * 0.75));
 
 export const options = {
-  // 50 VUs over 2 minutes
   stages: [
-    { duration: '15s', target: 25 },  // Ramp up to 25 VUs
-    { duration: '15s', target: 50 },  // Ramp up to 50 VUs
-    { duration: '1m15s', target: 50 },// Sustain heavy load at 50 VUs for 75 seconds
-    { duration: '15s', target: 0 },   // Cool down ramp-down
+    { duration: '30s', target: WARMUP_VUS }, // Warm-up
+    { duration: '30s', target: SURGE_VUS },  // Surge
+    { duration: '20s', target: PEAK_VUS },   // Peak
+    { duration: '1m00s', target: PEAK_VUS }, // Sustain
+    { duration: '20s', target: 0 },          // Ramp-down
   ],
   thresholds: {
-    http_req_failed: ['rate<0.10'],    // Warn if error rate exceeds 10%
-    http_req_duration: ['p(95)<3000'], // Monitor p95 latency
+    http_req_failed: ['rate<0.05'],    // Expect < 5% errors
+    http_req_duration: ['p(95)<3000'], // 95% under 3 seconds
   },
 };
 
 export default function () {
   if (__ITER === 0) {
-    sleep(Math.random() * 3);
+    sleep(Math.random() * 2);
   }
 
-  // Pick user mapped to VU
+  // Each VU gets its own isolated user account from pool
   const user = users[(__VU - 1) % users.length];
   const headers = {
     'Content-Type': 'application/json',
@@ -46,23 +53,20 @@ export default function () {
   });
 
   if (!listOk) {
-    sleep(2);
+    sleep(1);
     return;
   }
 
   const notes = listRes.json('data') || [];
+  sleep(Math.random() * 1.5 + 0.5);
 
-  // Think Time
-  sleep(Math.random() * 2 + 1);
-
-  // Probabilistic Actions
   const roll = Math.random() * 100;
 
   if (roll < 25) {
-    // 25%: Create
+    // 25%: Create Note
     const payload = JSON.stringify({
       title: `Task by ${user.username} @ ${Date.now()}`,
-      body: 'Generated automatically during 50 VU stress test',
+      body: 'Generated from tier-2 dynamic test',
       tag: 'work',
     });
 
@@ -74,8 +78,8 @@ export default function () {
     check(createRes, {
       'POST /api/notes status 201': (r) => r.status === 201,
     });
-  } else if (roll < 43 && notes.length > 0) {
-    // 18%: Update
+  } else if (roll < 45 && notes.length > 0) {
+    // 20%: Update Note
     const randomNote = notes[Math.floor(Math.random() * notes.length)];
     const payload = JSON.stringify({
       title: `${randomNote.title} (Updated)`,
@@ -95,8 +99,8 @@ export default function () {
     check(updateRes, {
       'PATCH /api/notes/:id status 200': (r) => r.status === 200,
     });
-  } else if (roll < 50 && notes.length > 0) {
-    // 7%: Delete
+  } else if (roll < 55 && notes.length > 0) {
+    // 10%: Delete Note
     const randomNote = notes[Math.floor(Math.random() * notes.length)];
 
     const deleteRes = http.del(
@@ -113,6 +117,5 @@ export default function () {
     });
   }
 
-  // Idle cooldown
-  sleep(Math.random() * 2 + 1);
+  sleep(Math.random() * 1.5 + 0.5);
 }
